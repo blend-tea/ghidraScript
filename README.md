@@ -57,34 +57,71 @@ CALL RBX
 再帰関数で実装したのでスタックオーバーフローする
 
 ## ExportDisas
-TestScriptをベースに作成．解析したい関数，それに関連する関数名とアセンブリをファイルに出力．以下出力例
+TestScriptをベースに作成．解析したい関数，それに関連する関数名とアセンブリをjson形式でファイルに出力．以下出力例
 ```
-main,00108920
-PUSH R15
-PUSH R14
-PUSH R12
-PUSH RBX
-SUB RSP,0x58
-MOV dword ptr [RSP + 0xc],0x7b
-(省略)
-CALL RBX
-ADD RSP,0x58
-POP RBX
-POP R12
-POP R14
-POP R15
-RET
-
-_print,00120ee0
-PUSH RBX
-SUB RSP,0x70
-MOV RBX,RDI
-LEA RAX,[0x14849a]
-(省略)
-LEA RSI,[0x155ba0]
-LEA RDI,[RSP + 0x20]
-CALL qword ptr [0x00157d50]
-UD2
+[
+    {
+        "instruction": [
+            "PUSH R15",
+            "PUSH R14",
+            "PUSH R12",
+            "PUSH RBX",
+            "SUB RSP,0x58",
+            "MOV dword ptr [RSP + 0xc],0x7b",
+            "LEA RAX,[0x1553a8]",
+            "MOV qword ptr [RSP + 0x18],RAX",
+            "MOV qword ptr [RSP + 0x20],0x1",
+            "LEA RAX,[0x146000]",
+            "MOV qword ptr [RSP + 0x28],RAX",
+            "XORPS XMM0,XMM0",
+            "MOVUPS xmmword ptr [RSP + 0x30],XMM0",
+            "LEA RBX,[0x120ee0]",
+            "LEA RDI,[RSP + 0x18]",
+            "CALL RBX",
+            "MOV dword ptr [RSP + 0x10],0x1c9",
+            "MOV dword ptr [RSP + 0x14],0x1c9",
+            "LEA RAX,[RSP + 0xc]",
+            "MOV qword ptr [RSP + 0x48],RAX",
+            "LEA R14,[0x144fc0]",
+            "MOV qword ptr [RSP + 0x50],R14",
+            "LEA R15,[0x1553b8]",
+            "MOV qword ptr [RSP + 0x18],R15",
+            "MOV qword ptr [RSP + 0x20],0x2",
+            "MOV qword ptr [RSP + 0x38],0x0",
+            "LEA R12,[RSP + 0x48]",
+            "MOV qword ptr [RSP + 0x28],R12",
+            "MOV qword ptr [RSP + 0x30],0x1",
+            "LEA RDI,[RSP + 0x18]",
+            "CALL RBX",
+            "LEA RAX,[RSP + 0x10]",
+            "MOV qword ptr [RSP + 0x48],RAX",
+            "MOV qword ptr [RSP + 0x50],R14",
+            "MOV qword ptr [RSP + 0x18],R15",
+            "MOV qword ptr [RSP + 0x20],0x2",
+            "MOV qword ptr [RSP + 0x38],0x0",
+            "MOV qword ptr [RSP + 0x28],R12",
+            "MOV qword ptr [RSP + 0x30],0x1",
+            "LEA RDI,[RSP + 0x18]",
+            "CALL RBX",
+            "LEA RAX,[RSP + 0x14]",
+            "MOV qword ptr [RSP + 0x48],RAX",
+            "MOV qword ptr [RSP + 0x50],R14",
+            "MOV qword ptr [RSP + 0x18],R15",
+            "MOV qword ptr [RSP + 0x20],0x2",
+            "MOV qword ptr [RSP + 0x38],0x0",
+            "MOV qword ptr [RSP + 0x28],R12",
+            "MOV qword ptr [RSP + 0x30],0x1",
+            "LEA RDI,[RSP + 0x18]",
+            "CALL RBX",
+            "ADD RSP,0x58",
+            "POP RBX",
+            "POP R12",
+            "POP R14",
+            "POP R15",
+            "RET"
+        ],
+        "function_name": "main"
+    },
 
 ```
 - データベースを作って関数名を自動でつけたい．
