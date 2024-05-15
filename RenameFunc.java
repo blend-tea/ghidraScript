@@ -6,6 +6,9 @@
 //@toolbar
 
 import java.io.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -13,9 +16,15 @@ import org.json.simple.parser.JSONParser;
 
 import docking.widgets.filechooser.GhidraFileChooser;
 import ghidra.app.script.GhidraScript;
+import ghidra.program.model.address.Address;
+import ghidra.program.model.listing.Function;
+import ghidra.program.model.listing.Instruction;
+import ghidra.program.model.symbol.Reference;
+import ghidra.program.model.symbol.SourceType;
 import ghidra.util.filechooser.ExtensionFileFilter;
 
 public class RenameFunc extends GhidraScript {
+	Set<String> renamedFunc = new HashSet<String>();
 
 	@Override
 	protected void run() throws Exception {
@@ -34,13 +43,55 @@ public class RenameFunc extends GhidraScript {
 		try {
 			JSONParser parser = new JSONParser();
 			JSONArray jsonArray = (JSONArray) parser.parse(new FileReader(dataBasePath));
-			for (Object obj : jsonArray) {
-				JSONObject jsonObj = (JSONObject) obj;
-				println(jsonObj.get("function_name").toString());
-//				println(obj.toString());
+			Address p1 = currentLocation.getAddress();
+			Function function = currentProgram.getFunctionManager().getFunctionContaining(p1);
+			if (function != null) {
+				Address[] startAddr = { function.getEntryPoint() };
+				renameFunc(startAddr, jsonArray);
 			}
 		} finally {
 
 		}
 	}
+    private void renameFunc(Address[] funcAddrs, JSONArray jsonList) throws Exception {
+        ArrayList<Address> writeList = new ArrayList<Address>();
+        for (Address funcAddr : funcAddrs) {
+            Function func = getFunctionAt(funcAddr);
+            if (func != null) {
+                JSONObject funcObj = new JSONObject();
+                JSONArray instArray = new JSONArray();
+                Address endAddr = func.getBody().getMaxAddress();
+                for(Address addr = funcAddr; addr.compareTo(endAddr) <= 0; addr = getInstructionAfter(addr).getAddress()) {
+                    Instruction inst = getInstructionAt(addr);
+                    if(inst == null) break;
+                    instArray.add(inst.toString());
+
+                    if(inst.getMnemonicString().equals("CALL")) {
+                        Reference ref[]  = inst.getOperandReferences(0);
+                        if(ref.length != 0) {
+                            Address callAddr = ref[0].getToAddress();
+                            Function callFunc = getFunctionAt(callAddr);
+                            if (callFunc != null) {
+                                String FuncName = callFunc.getName();
+								if (!renamedFunc.contains(FuncName)) {
+									writeList.add(callAddr);
+								}
+                            }
+                        }
+                    }
+                }
+				for (Object obj : jsonList) {
+					JSONObject jsonObj = (JSONObject) obj;
+					if (jsonObj.get("instruction").equals(instArray)) {
+						func.setName(jsonObj.get("function_name").toString(), SourceType.USER_DEFINED);
+						println(jsonObj.get("function_name").toString());
+						renamedFunc.add(jsonObj.get("function_name").toString());
+					}
+				}
+            }
+        }
+        if (writeList.size() > 0) {
+            renameFunc(writeList.toArray(new Address[writeList.size()]), jsonList);
+        }
+    }
 }
