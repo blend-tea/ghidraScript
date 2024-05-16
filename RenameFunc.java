@@ -25,6 +25,7 @@ import ghidra.util.filechooser.ExtensionFileFilter;
 
 public class RenameFunc extends GhidraScript {
 	Set<String> renamedFunc = new HashSet<String>();
+	Set<String> searchedFunc = new HashSet<String>();
 
 	@Override
 	protected void run() throws Exception {
@@ -73,7 +74,8 @@ public class RenameFunc extends GhidraScript {
                             Function callFunc = getFunctionAt(callAddr);
                             if (callFunc != null) {
                                 String FuncName = callFunc.getName();
-								if (!renamedFunc.contains(FuncName)) {
+								if (!searchedFunc.contains(FuncName)) {
+									searchedFunc.add(FuncName);
 									writeList.add(callAddr);
 								}
                             }
@@ -82,10 +84,13 @@ public class RenameFunc extends GhidraScript {
                 }
 				for (Object obj : jsonList) {
 					JSONObject jsonObj = (JSONObject) obj;
-					if (jsonObj.get("instruction").equals(instArray)) {
-						func.setName(jsonObj.get("function_name").toString(), SourceType.USER_DEFINED);
-						println(jsonObj.get("function_name").toString());
-						renamedFunc.add(jsonObj.get("function_name").toString());
+					if (!renamedFunc.contains(jsonObj.get("function_name").toString())) {
+						if (judgeAsm((JSONArray) jsonObj.get("instruction"), instArray) > 0.6) {
+							func.setName(jsonObj.get("function_name").toString(), SourceType.USER_DEFINED);
+							println(jsonObj.get("function_name").toString());
+							renamedFunc.add(jsonObj.get("function_name").toString());
+							break;
+						}
 					}
 				}
             }
@@ -93,5 +98,21 @@ public class RenameFunc extends GhidraScript {
         if (writeList.size() > 0) {
             renameFunc(writeList.toArray(new Address[writeList.size()]), jsonList);
         }
+}
+
+	private double judgeAsm(JSONArray json1, JSONArray json2) throws Exception {
+		int matchCount = 0;
+		if(json1.size() != json2.size()) {
+			return 0;
+		}
+	    for (int i = 0; i < json1.size(); i++) {
+	        String str1 = (String) json1.get(i);
+	        String str2 = (String) json2.get(i);
+	        if (str1.equals(str2)) {
+	            matchCount++;
+	        }
+	    }
+		return (double)matchCount / json1.size();
+		
     }
 }
